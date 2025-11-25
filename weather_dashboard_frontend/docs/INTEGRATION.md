@@ -8,9 +8,11 @@ This frontend integrates with a weather provider via a dedicated service layer u
   - searchCity(city)
   - getWeatherByCoordinates(lat, lon)
   - getCurrentWeather(city)
-  - getForecast(city)
-- `src/hooks/useWeather.js`: Hook that manages `loading/error/data` and cancels requests on city change.
-- `src/App.js`: Presentational components that call the hook and render UI, loading skeletons, and errors.
+  - getForecast(city) — returns an array of days
+- Hooks:
+  - `src/hooks/useWeather.js`: Manages current conditions `loading/error/data` and cancels requests on city change.
+  - `src/hooks/useForecast.js`: Manages forecast `loading/error/data` separately with an optional `days` parameter (default 5).
+- `src/App.js`: Presentational components that call hooks and render UI, loading skeletons, errors, and empty states.
 
 ## Configuration
 
@@ -18,6 +20,7 @@ Environment variables (create `.env` from `.env.example`):
 
 - `REACT_APP_API_BASE` (optional): Base URL for the weather API. If not provided, defaults to Open-Meteo (`https://geocoding-api.open-meteo.com` for geocoding and `https://api.open-meteo.com` for forecast).
 - `REACT_APP_WEATHER_API_KEY` (optional): API key if your provider requires one. Not needed for Open-Meteo.
+- `REACT_APP_WEATHER_UNITS` (optional): Set to `metric` (default) or `imperial`. Adjusts temperature and windspeed units.
 
 Notes:
 - Do not hardcode secrets in code.
@@ -48,7 +51,7 @@ UI follows a modern style with rounded cards, subtle shadows, and responsive lay
 
 ## Notes
 
-- The hook cancels in-flight requests on city changes to prevent race conditions.
+- The hooks cancel in-flight requests on city changes to prevent race conditions.
 - If you switch to another API, ensure the response mapping still produces:
-  - `data.current = { temperature, windspeed, time, description, icon }`
+  - `data.current = { temperature, windspeed, time, description, icon, units: { temperature, windspeed } }`
   - `data.forecast = [{ date, tMax, tMin, description, icon }, ...]`

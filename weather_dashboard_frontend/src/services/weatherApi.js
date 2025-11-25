@@ -1,4 +1,5 @@
 //
+//
 // Weather API service layer
 // Centralizes network requests and response mapping.
 // Reads base URL and API key from environment variables.
@@ -6,17 +7,19 @@
 // Environment variables:
 // - process.env.REACT_APP_API_BASE (optional): override base URL
 // - process.env.REACT_APP_WEATHER_API_KEY (optional): API key if provider requires it
+// - process.env.REACT_APP_WEATHER_UNITS (optional): "metric" | "imperial" (default metric)
 //
 
 const DEFAULT_BASE = process.env.REACT_APP_API_BASE?.trim()
-  ? process.env.REACT_APP_API_BASE.trim().replace(/\/+$/, "")
+  ? process.env.REACT_APP_API_BASE.trim().replace(/\/*$/, "")
   : "https://geocoding-api.open-meteo.com"; // default to free, keyless Open-Meteo geocoding
 
 const WEATHER_BASE = process.env.REACT_APP_API_BASE?.trim()
-  ? process.env.REACT_APP_API_BASE.trim().replace(/\/+$/, "")
+  ? process.env.REACT_APP_API_BASE.trim().replace(/\/*$/, "")
   : "https://api.open-meteo.com";
 
 const API_KEY = process.env.REACT_APP_WEATHER_API_KEY?.trim() || "";
+const UNITS = (process.env.REACT_APP_WEATHER_UNITS || "metric").toLowerCase(); // metric or imperial
 
 // Map common weather codes to a readable description and simple icon
 const weatherCodeMap = {
@@ -80,18 +83,22 @@ export async function searchCity(city, { signal } = {}) {
 }
 
 /**
- * Get current weather and small multi-day forecast from Open-Meteo (free).
+ * Get current weather and daily forecast from Open-Meteo (free).
  * Returns { current: {...}, forecast: [{ date, tMax, tMin, code, desc, icon }]}
  */
 // PUBLIC_INTERFACE
 export async function getWeatherByCoordinates(lat, lon, { signal } = {}) {
   /** Fetch current weather and forecast for coordinates. */
+  const useImperial = UNITS === "imperial";
   const params = new URLSearchParams({
     latitude: String(lat),
     longitude: String(lon),
     current_weather: "true",
     daily: "weathercode,temperature_2m_max,temperature_2m_min",
     timezone: "auto",
+    ...(useImperial
+      ? { temperature_unit: "fahrenheit", windspeed_unit: "mph" }
+      : { temperature_unit: "celsius", windspeed_unit: "kmh" }),
   });
   const url = `${WEATHER_BASE}/v1/forecast?${params.toString()}`;
   const data = await fetchJson(url, { signal });
@@ -107,6 +114,10 @@ export async function getWeatherByCoordinates(lat, lon, { signal } = {}) {
     weathercode: currentCode,
     description: currentMapped.desc,
     icon: currentMapped.icon,
+    units: {
+      temperature: useImperial ? "°F" : "°C",
+      windspeed: useImperial ? "mph" : "km/h",
+    },
   };
 
   const days = (data?.daily?.time || []).map((date, idx) => {
